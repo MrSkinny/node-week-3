@@ -4,9 +4,13 @@
 $(document).ready(function () {
   noteful.bindEventListeners();
 
-  api.search({}, response => {
-    store.notes = response;
-    noteful.render();
-  });
+  // Promisified Solution
+  api.search({})
+    .then(response => {
+      store.notes = response;
+      noteful.render();
+    });
 
+  // DRY Solution
+  // noteful.doSearchAndRender();
 });

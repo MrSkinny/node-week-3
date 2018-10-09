@@ -33,6 +33,15 @@ const noteful = (function () {
     return id;
   }
 
+  // DRY Search Solution
+  // function doSearchAndRender() {
+  //   return api.search(store.currentSearchTerm)
+  //     .then(updateResponse => {
+  //       store.notes = updateResponse;
+  //       render();
+  //     });
+  // }
+
   /**
    * EVENT LISTENERS AND HANDLERS
    */
@@ -42,10 +51,11 @@ const noteful = (function () {
 
       const noteId = getNoteIdFromElement(event.currentTarget);
 
-      api.details(noteId, detailsResponse => {
-        store.currentNote = detailsResponse;
-        render();
-      });
+      api.details(noteId)
+        .then(detailsResponse => {
+          store.currentNote = detailsResponse;
+          render();
+        });
 
     });
   }
@@ -57,10 +67,15 @@ const noteful = (function () {
       const searchTerm = $('.js-note-search-entry').val();
       store.currentSearchTerm = searchTerm ? { searchTerm } : {};
 
-      api.search(store.currentSearchTerm, searchResponse => {
-        store.notes = searchResponse;
-        render();
-      });
+      // Promisified Solution
+      api.search(store.currentSearchTerm)
+        .then(searchResponse => {
+          store.notes = searchResponse;
+          render();
+        });
+
+      // DRY Search Solution
+      // doSearchAndRender();
 
     });
   }
@@ -69,7 +84,54 @@ const noteful = (function () {
     $('.js-note-edit-form').on('submit', function (event) {
       event.preventDefault();
 
-      console.log('Submit Note, coming soon...');
+      const editForm = $(event.currentTarget);
+
+      const noteObj = {
+        id: store.currentNote.id,
+        title: editForm.find('.js-note-title-entry').val(),
+        content: editForm.find('.js-note-content-entry').val()
+      };
+
+      if (noteObj.id) {
+
+        // Promisified Solution
+        api.update(store.currentNote.id, noteObj)
+          .then(updateResponse => {
+            store.currentNote = updateResponse;
+            return api.search(store.currentSearchTerm);
+          })
+          .then(searchResponse => {
+            store.notes = searchResponse;
+            render();
+          });
+
+        // DRY Search Solution
+        // api.update(store.currentNote.id, noteObj)
+        //   .then(updateResponse => {
+        //     store.currentNote = updateResponse;
+        //   })
+        //   .then(doSearchAndRender);
+
+      } else {
+
+        // Promisified Solution
+        api.create(noteObj)
+          .then(createResponse => {
+            store.currentNote = createResponse;
+            return api.search(store.currentSearchTerm);
+          })
+          .then(searchResponse => {
+            store.notes = searchResponse;
+            render();
+          });
+
+        // DRY Search Solution
+        // api.create(noteObj)
+        //   .then(createResponse => {
+        //     store.currentNote = createResponse;
+        //   })
+        //   .then(doSearchAndRender);
+      }
 
     });
   }
@@ -78,7 +140,8 @@ const noteful = (function () {
     $('.js-start-new-note-form').on('submit', event => {
       event.preventDefault();
 
-      console.log('Start New Note, coming soon...');
+      store.currentNote = {};
+      render();
 
     });
   }
@@ -87,8 +150,27 @@ const noteful = (function () {
     $('.js-notes-list').on('click', '.js-note-delete-button', event => {
       event.preventDefault();
 
-      console.log('Delete Note, coming soon...');
-      
+      const noteId = getNoteIdFromElement(event.currentTarget);
+
+      // Promisified Solution
+      api.remove(noteId)
+        .then(() => api.search(store.currentSearchTerm))
+        .then(searchResponse => {
+          store.notes = searchResponse;
+          if (noteId === store.currentNote.id) {
+            store.currentNote = {};
+          }
+          render();
+        });
+
+      // DRY Search Solution
+      // api.remove(noteId)
+      //   .then(() => {
+      //     if (noteId === store.currentNote.id) {
+      //       store.currentNote = {};
+      //     }
+      //   })
+      //   .then(doSearchAndRender);
     });
   }
 
@@ -104,7 +186,9 @@ const noteful = (function () {
   // This object contains the only exposed methods from this module:
   return {
     render: render,
-    bindEventListeners: bindEventListeners,
+    bindEventListeners: bindEventListeners
+    // DRY Search Solution
+    // doSearchAndRender
   };
 
 }());
